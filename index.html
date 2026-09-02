@@ -254,10 +254,13 @@ function parseScore(xmlText){
       const tempoMark = m.querySelector('sound[tempo]')?.getAttribute('tempo') ||
                         m.querySelector('metronome per-minute')?.textContent;
       if (tempoMark && isFinite(parseFloat(tempoMark))) tempo = parseFloat(tempoMark);
+      let cursor = 0;
       const notes = [...m.children].filter(c => c.tagName === 'note').map(n => {
         const dur   = parseInt(n.querySelector('duration')?.textContent || '0', 10);
         const chord = !!n.querySelector('chord');
-        if (n.querySelector('rest')) return { rest:true, chord, dur, divisions };
+        const onset = cursor;
+        if (!chord) cursor += dur;
+        if (n.querySelector('rest')) return { rest:true, chord, dur, divisions, onset };
         const step   = n.querySelector('pitch step')?.textContent || 'C';
         const alter  = parseInt(n.querySelector('pitch alter')?.textContent || '0', 10);
         const octave = parseInt(n.querySelector('pitch octave')?.textContent || '4', 10);
@@ -282,7 +285,7 @@ function parseScore(xmlText){
         const tieStart = !!n.querySelector('tie[type="start"], tied[type="start"]');
         const tieStop  = !!n.querySelector('tie[type="stop"], tied[type="stop"]');
 
-        return { rest:false, chord, dur, divisions, step, alter, octave, lyric,
+        return { rest:false, chord, dur, divisions, onset, step, alter, octave, lyric,
                  tieStart, tieStop, midi: toMidi(step, alter, octave), el: n };
       });
       return { notes, fifths, divisions, mode, tempo, time: time && { ...time }, clef: { ...clef },
@@ -290,6 +293,34 @@ function parseScore(xmlText){
     });
     return { id: p.getAttribute('id'), index, name: names[p.getAttribute('id')] || `Part ${index+1}`, measures };
   });
+
+  /* Every part keeps its own lyric line. When a harmony note is sung but
+     has no lyric at that moment, borrow the closest syllable from the
+     fullest lyric part. Rests receive nothing, so those stay Soprano-only. */
+  const lyricSource = parts.reduce((best, part) => {
+    const count = part.measures.flatMap(m => m.notes).filter(n => n.lyric).length;
+    return count > best.count ? { part, count } : best;
+  }, { part:null, count:0 }).part;
+  if (lyricSource){
+    parts.filter(part => part !== lyricSource).forEach(part => {
+      part.measures.forEach((measure, i) => {
+        const sourceNotes = lyricSource.measures[i]?.notes.filter(n => n.lyric) || [];
+        const targetNotes = measure.notes.filter(n => !n.rest && !n.chord);
+        sourceNotes.forEach(source => {
+          let closest = null, distance = Infinity;
+          targetNotes.forEach(target => {
+            const d = Math.abs(source.onset / source.divisions - target.onset / target.divisions);
+            if (d < distance){ closest = target; distance = d; }
+          });
+          if (closest && distance <= 0.5 && !closest.lyric){
+            closest.lyric = source.lyric;
+            const lyric = source.el.querySelector('lyric')?.cloneNode(true);
+            if (lyric) closest.el.appendChild(lyric);
+          }
+        });
+      });
+    });
+  }
 
   return { doc, parts, xml: xmlText };
 }
@@ -599,12 +630,13 @@ async function renderSheet(){
     measureNumberInterval: 1,
     drawMeasureNumbersOnlyAtSystemStart: false
   });
+  await osmd.load(xml);
+  // Loading rebuilds OSMD's rules, so apply these after load rather than before it.
   if (osmd.rules){
     osmd.rules.RenderLyrics = state.showLyrics;
     osmd.rules.RenderMeasureNumbers = true;
     osmd.rules.MeasureNumberLabelOffset = 0;
   }
-  await osmd.load(xml);
   try {
     osmd.sheet.Instruments.forEach((ins, i) => { ins.Visible = (i === state.partIndex); });
   } catch(e){}
