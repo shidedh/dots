@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Choir practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Vazirmatn:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.9.0/build/opensheetmusicdisplay.min.js"></script>
+<style>
+  :root{
+    --ground:#191c24;
+    --raised:#232735;
+    --line:#333a4d;
+    --paper:#ffffff;
+    --text:#e8eaf0;
+    --muted:#98a0b4;
+    --saffron:#e8a33d;
+    --verdigris:#3e8e7e;
+    --pomegranate:#c04a3e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--ground);
+    color:var(--text);
+    font-family:"Vazirmatn",system-ui,sans-serif;
+    font-size:16px;
+    line-height:1.5;
+    padding:28px 20px 80px;
+  }
+  .wrap{max-width:900px;margin:0 auto}
+
+  header{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px 18px;margin-bottom:22px}
+  h1{font-family:"Fraunces",Georgia,serif;font-weight:600;font-size:30px;margin:0;letter-spacing:-.01em}
+  header .sub{color:var(--muted);font-size:14px}
+
+  .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  .bar label{color:var(--muted);font-size:13px;margin-inline-end:4px}
+  select,button,input[type=file]::file-selector-button{
+    font:inherit;font-size:14px;color:var(--text);
+    background:var(--raised);border:1px solid var(--line);
+    border-radius:var(--radius);padding:7px 12px;cursor:pointer;
+  }
+  button:hover,select:hover{border-color:var(--saffron)}
+  button:focus-visible,select:focus-visible,.chip:focus-visible{outline:2px solid var(--saffron);outline-offset:2px}
+  button.primary{background:var(--saffron);color:#191c24;border-color:var(--saffron);font-weight:700}
+  button.primary:hover{filter:brightness(1.08)}
+  button[aria-pressed=true]{border-color:var(--saffron);color:var(--saffron)}
+  input[type=file]{font:inherit;font-size:13px;color:var(--muted);max-width:230px}
+
+  .paper{
+    background:var(--paper);border-radius:var(--radius);
+    padding:10px 8px;overflow-x:auto;min-height:150px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.06);
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+    cursor:pointer;
+  }
+  .paper svg{display:block}
+  .paper .tapped,.paper .tapped path{fill:var(--saffron)}
+  @keyframes labelfade{
+    0%{opacity:0}
+    10%{opacity:1}
+    68%{opacity:1}
+    100%{opacity:0}
+  }
+  .paper .notelabel{animation:labelfade 1.5s ease forwards}
+  .paper .notelabel.sticky{animation:none;opacity:1}
+  @media (prefers-reduced-motion:reduce){.paper .notelabel{animation:none;opacity:1}}
+
+  .strip{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+  .chip{
+    background:var(--raised);border:1px solid var(--line);border-radius:var(--radius);
+    padding:10px 14px;min-width:86px;text-align:center;cursor:pointer;
+    font:inherit;color:var(--text);transition:transform .12s ease, border-color .12s ease;
+  }
+  .chip .syll{font-family:"Fraunces",Georgia,serif;font-size:23px;line-height:1.1;display:block}
+  .chip .fa{display:block;font-size:15px;color:var(--muted);margin-top:1px}
+  .chip .abc{display:block;font-size:12px;color:var(--muted);margin-top:5px;letter-spacing:.04em}
+  .chip .lyr{display:block;font-size:13px;color:var(--text);margin-top:6px;
+             padding-top:5px;border-top:1px solid var(--line);opacity:.8}
+  .chip.sounding{border-color:var(--saffron);transform:translateY(-3px)}
+  .chip.blank .syll{color:var(--muted)}
+  .chip.current{border-color:var(--saffron);box-shadow:0 0 0 1px var(--saffron)}
+  .chip.right{border-color:var(--verdigris)}
+  .chip.wrong{border-color:var(--pomegranate)}
+  .chip.rest{background:transparent;border-style:dashed}
+  .chip.rest .syll{color:var(--muted);font-style:italic}
+  .chip.counting{transform:translateY(-3px);background:rgba(152,160,180,.12)}
+
+  .keypad{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .keypad button{min-width:64px;font-family:"Fraunces",Georgia,serif;font-size:17px}
+
+  .note{color:var(--muted);font-size:13.5px;margin-top:14px;max-width:66ch}
+  .score-line{color:var(--muted);font-size:14px;margin-top:14px}
+  .score-line b{color:var(--text);font-weight:700}
+  hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+  .hidden{display:none}
+  @media (prefers-reduced-motion:reduce){.chip{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Choir practice</h1>
+  <span class="sub" id="sheetTitle">Demo segment — load your own MusicXML to replace it</span>
+</header>
+
+<div class="bar">
+  <input type="file" id="file" accept=".musicxml,.xml,.mxl">
+  <label for="part">Voice</label>
+  <select id="part"></select>
+  <label for="barsSel">Bars</label>
+  <select id="barsSel">
+    <option value="1">1</option>
+    <option value="2" selected>2</option>
+    <option value="4">4</option>
+  </select>
+  <span class="score-line" id="timeSignature"></span>
+  <button id="newSeg">New segment</button>
+</div>
+
+<div class="bar">
+  <label>Show</label>
+  <button id="faBtn" aria-pressed="true">فارسی</button>
+  <button id="lyricBtn" aria-pressed="true">Lyrics</button>
+  <button id="accidentalNamesBtn" aria-pressed="false">Accidental names</button>
+</div>
+
+<div class="paper" id="sheet"></div>
+
+<div class="bar" style="margin-top:16px">
+  <button class="primary" id="play">Play segment</button>
+  <span class="score-line" id="audioState"></span>
+  <button id="reveal" class="hidden">Show answers</button>
+  <button id="quizBtn">Start quiz</button>
+  <span class="score-line hidden" id="scoreLine"></span>
+</div>
+
+<div class="strip" id="strip"></div>
+<div class="keypad hidden" id="keypad"></div>
+
+<p class="note" id="hint">Click a note on the staff, or a card below, to hear it. Rest cards give you their length as a held pulse.</p>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------ *
+ * Note model
+ * ------------------------------------------------------------------ */
+const LETTERS = ['C','D','E','F','G','A','B'];
+const SEMIS   = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+const SOLF_LA = {C:'do',D:'re',E:'mi',F:'fa',G:'sol',A:'la',B:'si'};
+const SOLF_FA = {C:'دو',D:'ر',E:'می',F:'فا',G:'سل',A:'لا',B:'سی'};
+const SOLF_ORDER = ['do','re','mi','fa','sol','la','si'];
+
+const toMidi = (step, alter, octave) => 12 * (octave + 1) + SEMIS[step] + alter;
+const diatonic = (step, octave) => octave * 7 + LETTERS.indexOf(step);
+const fromDiatonic = d => ({ step: LETTERS[((d % 7) + 7) % 7], octave: Math.floor(d / 7) });
+
+const SHARP_ORDER = ['F','C','G','D','A','E','B'];
+const FLAT_ORDER  = ['B','E','A','D','G','C','F'];
+function alterFromKey(step, fifths){
+  if (fifths > 0) return SHARP_ORDER.slice(0, fifths).includes(step) ? 1 : 0;
+  if (fifths < 0) return FLAT_ORDER.slice(0, -fifths).includes(step) ? -1 : 0;
+  return 0;
+}
+/* Tonic for each key signature, by mode. Reading <mode> matters: one
+   sharp is G major but also E minor, and movable do lands differently. */
+const MAJOR_KEY = {'-7':['C',-1],'-6':['G',-1],'-5':['D',-1],'-4':['A',-1],'-3':['E',-1],
+                   '-2':['B',-1],'-1':['F',0],'0':['C',0],'1':['G',0],'2':['D',0],
+                   '3':['A',0],'4':['E',0],'5':['B',0],'6':['F',1],'7':['C',1]};
+const MINOR_KEY = {'-7':['A',-1],'-6':['E',-1],'-5':['B',-1],'-4':['F',0],'-3':['C',0],
+                   '-2':['G',0],'-1':['D',0],'0':['A',0],'1':['E',0],'2':['B',0],
+                   '3':['F',1],'4':['C',1],'5':['G',1],'6':['D',1],'7':['A',1]};
+function keyTonic(fifths, mode){
+  const table = (mode === 'minor') ? MINOR_KEY : MAJOR_KEY;
+  return table[String(fifths)] || ['C', 0];
+}
+function keyAlteredLetters(fifths){
+  if (fifths > 0) return SHARP_ORDER.slice(0, fifths);
+  if (fifths < 0) return FLAT_ORDER.slice(0, -fifths);
+  return [];
+}
+
+function accText(alter, lang){
+  if (!alter || !state?.showAccidentalNames) return '';
+  const one = alter > 0 ? (lang === 'fa' ? 'دیز' : 'diez') : (lang === 'fa' ? 'بمل' : 'bemol');
+  const two = alter > 0 ? (lang === 'fa' ? 'دوبل دیز' : 'dobl diez') : (lang === 'fa' ? 'دوبل بمل' : 'dobl bemol');
+  return ' ' + (Math.abs(alter) > 1 ? two : one);
+}
+function accSign(alter){
+  if (!alter) return '';
+  return alter > 0 ? '♯'.repeat(alter) : '♭'.repeat(-alter);
+}
+function solfege(step, alter, fifths, system, lang, mode){
+  let idx = LETTERS.indexOf(step);
+  if (system === 'movable'){
+    const tonic = keyTonic(fifths, mode)[0];
+    idx = ((idx - LETTERS.indexOf(tonic)) % 7 + 7) % 7;
+    const key = SOLF_ORDER[idx];
+    const faKey = { do:'دو', re:'ر', mi:'می', fa:'فا', sol:'سل', la:'لا', si:'سی' }[key];
+    return lang === 'fa' ? faKey : key;
+  }
+  return lang === 'fa' ? SOLF_FA[step] : SOLF_LA[step];
+}
+function letterName(step, alter, octave){
+  return step + (state?.showAccidentalNames ? accSign(alter) : '') + octave;
+}
+
+/* Rests are named by how long you stay quiet, in quarter-note beats. */
+const REST_NAMES = {4:'whole',3:'dotted half',2:'half',1.5:'dotted quarter',
+                    1:'quarter',0.75:'dotted 8th',0.5:'8th',0.375:'dotted 16th',0.25:'16th'};
+const REST_FRACS = {0.25:'¼',0.375:'⅜',0.5:'½',0.75:'¾',1.5:'1½'};
+const beatsName = b => (REST_NAMES[b] ? REST_NAMES[b] + ' rest' : b + ' beats');
+const beatsFrac = b => REST_FRACS[b] || String(b);
+
+/* ------------------------------------------------------------------ *
+ * MusicXML parsing — the answer key and the audio come from here,
+ * OSMD is used only to draw. Keeping them separate means a rendering
+ * quirk can never produce a wrong quiz answer.
+ * ------------------------------------------------------------------ */
+function parseScore(xmlText){
+  const doc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('That file is not valid MusicXML.');
+
+  const names = {};
+  doc.querySelectorAll('part-list score-part').forEach(sp => {
+    names[sp.getAttribute('id')] =
+      (sp.querySelector('part-abbreviation')?.textContent ||
+       sp.querySelector('part-name')?.textContent ||
+       sp.getAttribute('id')).trim();
+  });
+
+  const parts = [...doc.querySelectorAll('part')].map((p, index) => {
+    let fifths = 0, divisions = 1, mode = 'major', tempo = 72,
+        time = null, clef = { sign:'G', line:2 };
+    const measures = [...p.children].filter(c => c.tagName === 'measure').map(m => {
+      const f = m.querySelector('attributes key fifths'); if (f) fifths = parseInt(f.textContent, 10);
+      const md = m.querySelector('attributes key mode');  if (md) mode = md.textContent.trim();
+      const d = m.querySelector('attributes divisions');  if (d) divisions = parseInt(d.textContent, 10);
+      const timeEl = m.querySelector('attributes time');
+      if (timeEl) time = {
+        beats: timeEl.querySelector('beats')?.textContent.trim(),
+        beatType: timeEl.querySelector('beat-type')?.textContent.trim()
+      };
+      const c = m.querySelector('attributes clef');
+      if (c) clef = { sign: c.querySelector('sign')?.textContent || 'G',
+                      line: parseInt(c.querySelector('line')?.textContent || '2', 10) };
+      const tempoMark = m.querySelector('sound[tempo]')?.getAttribute('tempo') ||
+                        m.querySelector('metronome per-minute')?.textContent;
+      if (tempoMark && isFinite(parseFloat(tempoMark))) tempo = parseFloat(tempoMark);
+      const notes = [...m.children].filter(c => c.tagName === 'note').map(n => {
+        const dur   = parseInt(n.querySelector('duration')?.textContent || '0', 10);
+        const chord = !!n.querySelector('chord');
+        if (n.querySelector('rest')) return { rest:true, chord, dur, divisions };
+        const step   = n.querySelector('pitch step')?.textContent || 'C';
+        const alter  = parseInt(n.querySelector('pitch alter')?.textContent || '0', 10);
+        const octave = parseInt(n.querySelector('pitch octave')?.textContent || '4', 10);
+
+        /* Lyrics in real scores carry a verse number, split words across
+           notes, and glue two syllables to one note with <elision>.
+           Take the lowest verse and rebuild the syllable as printed. */
+        const verses = [...n.querySelectorAll('lyric')]
+          .sort((a, b) => (+(a.getAttribute('number') || 1)) - (+(b.getAttribute('number') || 1)));
+        let lyric = '';
+        if (verses[0]){
+          lyric = [...verses[0].children].map(c => {
+            if (c.tagName === 'text')    return c.textContent;
+            if (c.tagName === 'elision') return c.textContent || '\u203F';
+            return '';
+          }).join('');
+          const syl = verses[0].querySelector('syllabic')?.textContent;
+          if (syl === 'begin' || syl === 'middle') lyric += '-';
+        }
+
+        // a tie means one sung note written twice, not two attacks
+        const tieStart = !!n.querySelector('tie[type="start"], tied[type="start"]');
+        const tieStop  = !!n.querySelector('tie[type="stop"], tied[type="stop"]');
+
+        return { rest:false, chord, dur, divisions, step, alter, octave, lyric,
+                 tieStart, tieStop, midi: toMidi(step, alter, octave), el: n };
+      });
+      return { notes, fifths, divisions, mode, tempo, time: time && { ...time }, clef: { ...clef },
+               number: m.getAttribute('number') };
+    });
+    return { id: p.getAttribute('id'), index, name: names[p.getAttribute('id')] || `Part ${index+1}`, measures };
+  });
+
+  return { doc, parts, xml: xmlText };
+}
+
+/* DOMParser drops the <?xml?> declaration, so XMLSerializer never puts
+   it back. OSMD checks for that exact prefix: without it, a long string
+   is rejected outright and a short one is mistaken for a URL. */
+function serializeScore(doc){
+  const xml = new XMLSerializer().serializeToString(doc);
+  return xml.startsWith('<?xml') ? xml : '<?xml version="1.0" encoding="UTF-8"?>\n' + xml;
+}
+
+/* Same staff position, different clef.
+   Treble G2 line 1 = E4, bass F4 line 1 = G2 → twelve diatonic steps apart. */
+const CLEF_SHIFT = 12;
+function swapClefXml(score, partIndex){
+  const doc = score.doc.cloneNode(true);
+  const part = [...doc.querySelectorAll('part')][partIndex];
+  if (!part) return { doc, xml: score.xml };
+
+  let fifths = 0, dir = 0;
+  [...part.children].filter(c => c.tagName === 'measure').forEach(m => {
+    const f = m.querySelector('attributes key fifths'); if (f) fifths = parseInt(f.textContent, 10);
+    const clef = m.querySelector('attributes clef');
+    if (clef){
+      const sign = clef.querySelector('sign');
+      const line = clef.querySelector('line');
+      if (sign?.textContent === 'G'){ sign.textContent = 'F'; if (line) line.textContent = '4'; dir = -1; }
+      else if (sign?.textContent === 'F'){ sign.textContent = 'G'; if (line) line.textContent = '2'; dir = +1; }
+    }
+    if (!dir) return;
+    [...m.children].filter(c => c.tagName === 'note').forEach(n => {
+      const pitch = n.querySelector('pitch');
+      if (!pitch) return;
+      const step = pitch.querySelector('step').textContent;
+      const oct  = parseInt(pitch.querySelector('octave').textContent, 10);
+      const moved = fromDiatonic(diatonic(step, oct) + dir * CLEF_SHIFT);
+      pitch.querySelector('step').textContent = moved.step;
+      pitch.querySelector('octave').textContent = String(moved.octave);
+      const alter = alterFromKey(moved.step, fifths);
+      let alterEl = pitch.querySelector('alter');
+      if (alter === 0){ alterEl?.remove(); }
+      else {
+        if (!alterEl){
+          alterEl = doc.createElement('alter');
+          pitch.insertBefore(alterEl, pitch.querySelector('octave'));
+        }
+        alterEl.textContent = String(alter);
+      }
+      n.querySelector('accidental')?.remove();  // printed accidentals no longer apply
+    });
+  });
+  return { doc, xml: serializeScore(doc) };
+}
+
+/* ------------------------------------------------------------------ *
+ * Diagnostics — this app is used on phones at rehearsal, where there
+ * is no console to open. Anything that goes wrong shows up on screen.
+ * ------------------------------------------------------------------ */
+function logLine(msg){
+  console.warn(msg);
+}
+window.addEventListener('error', e => logLine('error: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')'));
+window.addEventListener('unhandledrejection', e => logLine('rejected: ' + (e.reason?.message || e.reason)));
+
+/* ------------------------------------------------------------------ *
+ * Optional note-marking support retained for score rendering.
+ * ------------------------------------------------------------------ */
+function markAccidentals(doc){
+  const NAME = {1:'sharp', 2:'sharp-sharp', '-1':'flat', '-2':'flat-flat', 0:'natural'};
+  [...doc.querySelectorAll('part')].forEach(part => {
+    let fifths = 0;
+    [...part.children].filter(c => c.tagName === 'measure').forEach(m => {
+      const f = m.querySelector('attributes key fifths');
+      if (f) fifths = parseInt(f.textContent, 10);
+      [...m.children].filter(c => c.tagName === 'note').forEach(n => {
+        const pitch = n.querySelector('pitch');
+        if (!pitch || n.querySelector('accidental')) return;
+        const step  = pitch.querySelector('step').textContent;
+        const alter = parseInt(pitch.querySelector('alter')?.textContent || '0', 10);
+        // a natural is only worth printing where the key would have altered it
+        if (alter === 0 && alterFromKey(step, fifths) === 0) return;
+        const acc = doc.createElement('accidental');
+        acc.textContent = NAME[alter] || 'natural';
+        const lyric = n.querySelector('lyric');
+        lyric ? n.insertBefore(acc, lyric) : n.appendChild(acc);
+      });
+    });
+  });
+}
+
+/* ------------------------------------------------------------------ *
+ * Audio — plain Web Audio, no samples to download and nothing to wait
+ * for. A struck-string envelope over five partials is close enough to
+ * a piano for pitch reference.
+ * ------------------------------------------------------------------ */
+let ctx = null, master = null;
+
+function makeCtx(){
+  if (ctx) return ctx;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC){ logLine('No Web Audio support in this browser.'); return null; }
+  ctx = new AC();
+  master = ctx.createGain();
+  master.gain.value = 0.5;
+  master.connect(ctx.destination);
+  logLine('AudioContext created, sampleRate ' + ctx.sampleRate + ', state ' + ctx.state);
+  return ctx;
+}
+
+/* Must run inside a real user gesture. resume() is fired but not awaited:
+   awaiting it can drop the gesture on Safari, and scheduled nodes still
+   sound once the context starts. */
+function ensureAudio(){
+  const ac = makeCtx();
+  if (!ac) return null;
+  if (ac.state !== 'running'){
+    ac.resume().then(showAudioState, e => logLine('resume() rejected: ' + e.message));
+    try {
+      const buf = ac.createBuffer(1, 1, ac.sampleRate);
+      const src = ac.createBufferSource();
+      src.buffer = buf; src.connect(ac.destination); src.start(0);
+    } catch(e){ logLine('silent-buffer unlock failed: ' + e.message); }
+  }
+  showAudioState();
+  return ac;
+}
+
+function showAudioState(){
+  const el = document.getElementById('audioState');
+  if (!ctx){ el.textContent = 'sound not started'; return; }
+  el.textContent = ctx.state === 'running' ? 'sound on' : 'sound blocked — tap Play segment';
+}
+
+/* A piano note is not a chord of equal sines. Three things carry the
+   character: upper partials decay far faster than the fundamental,
+   the partials run progressively sharp because a real string is stiff,
+   and there is a brief hammer thump before any pitch is audible. */
+let noiseBuf = null;
+function hammerNoise(ac){
+  if (!noiseBuf){
+    noiseBuf = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.05), ac.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
+}
+
+/* damp: seconds until the key is released, or null to let it ring out. */
+function playMidi(midi, damp = null){
+  const ac = ensureAudio();
+  if (!ac) return;
+  const f0 = 440 * Math.pow(2, (midi - 69) / 12);
+  if (!isFinite(f0) || f0 <= 0){ logLine('bad pitch, midi=' + midi); return; }
+
+  const t0 = ac.currentTime + 0.02;
+
+  // bass strings are stiffer, ring longer, and carry more partials
+  const stiff  = 0.00018 + 0.0011 * Math.pow(Math.max(0, 66 - midi) / 45, 2);
+  const count  = midi > 84 ? 7 : midi > 72 ? 11 : 15;
+  const ring   = Math.min(9, Math.max(0.9, 1.1 + (86 - midi) * 0.115));
+  const level  = 0.20 * Math.pow(2, -(midi - 60) / 90);
+  const life   = damp == null ? ring : Math.max(0.14, damp);
+
+  const bus = ac.createGain();
+  bus.gain.setValueAtTime(level, t0);
+  bus.connect(master);
+
+  // hammer strike
+  const hs = ac.createBufferSource();
+  hs.buffer = hammerNoise(ac);
+  const hf = ac.createBiquadFilter();
+  hf.type = 'bandpass';
+  hf.frequency.value = Math.min(6000, f0 * 5);
+  hf.Q.value = 0.7;
+  const hg = ac.createGain();
+  hg.gain.setValueAtTime(0.09, t0);
+  hg.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.045);
+  hs.connect(hf); hf.connect(hg); hg.connect(bus);
+  hs.start(t0); hs.stop(t0 + 0.06);
+
+  const oscs = [];
+  const voice = (freq, amp, decay) => {
+    if (freq > ac.sampleRate * 0.45) return;
+    const o = ac.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = freq;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(amp, t0 + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+    o.connect(g); g.connect(bus);
+    oscs.push(o);
+  };
+
+  for (let n = 1; n <= count; n++){
+    const freq  = f0 * n * Math.sqrt(1 + stiff * n * n);
+    const amp   = Math.pow(n, -1.35) * (n % 2 ? 1 : 0.72);
+    const decay = Math.max(0.09, ring / (1 + 0.62 * (n - 1)));
+    voice(freq, amp, decay);
+  }
+  // second string of the unison pair, a hair flat — this is the shimmer
+  voice(f0 * 0.9994, 0.55, ring);
+
+  if (damp != null){
+    const off = t0 + life;
+    bus.gain.setValueAtTime(level, off);
+    bus.gain.exponentialRampToValueAtTime(0.0001, off + 0.10);
+  }
+  const stop = t0 + (damp == null ? ring : life + 0.14) + 0.05;
+  oscs.forEach(o => { o.start(t0); o.stop(stop); });
+  return () => {
+    try { bus.gain.cancelScheduledValues(ac.currentTime); bus.gain.setValueAtTime(0.0001, ac.currentTime); } catch(e){}
+    oscs.forEach(o => { try { o.stop(); } catch(e){} });
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * State + rendering
+ * ------------------------------------------------------------------ */
+const state = {
+  score: null,
+  partIndex: 0,
+  start: 0,          // 0-based measure index
+  bars: 2,
+  clefView: 'orig',
+  showFa: true,
+  showLyrics: true,
+  showAccidentalNames: false,
+  doSys: 'fixed',
+  quiz: null
+};
+
+const hasOSMD = typeof opensheetmusicdisplay !== 'undefined';
+const osmd = hasOSMD
+  ? new opensheetmusicdisplay.OpenSheetMusicDisplay('sheet', {
+      autoResize: true,
+      backend: 'svg',
+      drawTitle: false,
+      drawSubtitle: false,
+      drawComposer: false,
+      drawLyricist: false,
+      drawPartNames: false
+    })
+  : null;
+
+function segmentNotes(){
+  const part = state.score.parts[state.partIndex];
+  const out = [];
+  for (let i = state.start; i < Math.min(state.start + state.bars, part.measures.length); i++){
+    const m = part.measures[i];
+    for (const n of m.notes){
+      const prev = out[out.length - 1];
+      /* A tie is one held note written as two. Fold the second into the
+         first so it sounds once, for its whole length, and does not
+         appear twice in the cards or the quiz. */
+      if (!n.rest && n.tieStop && prev && !prev.rest && prev.tieStart && prev.midi === n.midi){
+        prev.dur += n.dur * (prev.divisions / n.divisions);
+        prev.tieStart = n.tieStart;
+        if (n.lyric && !prev.lyric) prev.lyric = n.lyric;
+        continue;
+      }
+      out.push({ ...n, fifths: m.fifths, mode: m.mode, tempo: m.tempo });
+    }
+  }
+  return out;
+}
+
+/* Apply the clef swap to the plain-data notes too, so cards and audio
+   agree with whatever is drawn. */
+function displayNotes(){
+  const notes = segmentNotes();
+  if (state.clefView === 'orig') return notes;
+  const part = state.score.parts[state.partIndex];
+  const sign = part.measures[state.start]?.clef.sign || 'G';
+  const dir = sign === 'G' ? -1 : +1;
+  return notes.map(n => {
+    if (n.rest) return n;
+    const moved = fromDiatonic(diatonic(n.step, n.octave) + dir * CLEF_SHIFT);
+    const alter = alterFromKey(moved.step, n.fifths);
+    return { ...n, step: moved.step, octave: moved.octave, alter,
+             midi: toMidi(moved.step, alter, moved.octave) };
+  });
+}
+
+async function renderSheet(){
+  const measure = state.score.parts[state.partIndex]?.measures[state.start];
+  const time = measure?.time;
+  document.getElementById('timeSignature').textContent = time ? `Time: ${time.beats}/${time.beatType}` : '';
+  if (!osmd){
+    document.getElementById('sheet').innerHTML =
+      '<p style="color:#c04a3e;padding:18px;font:15px/1.5 system-ui">' +
+      'The notation library did not load, so the staff is blank. Serve this page over http rather than ' +
+      'opening the file directly, and make sure cdn.jsdelivr.net is reachable. The cards below still work.' +
+      '</p>';
+    return;
+  }
+  const doc = state.clefView === 'orig'
+    ? state.score.doc.cloneNode(true)
+    : swapClefXml(state.score, state.partIndex).doc;
+  const xml = serializeScore(doc);
+  osmd.setOptions({
+    drawFromMeasureNumber: state.start + 1,
+    drawUpToMeasureNumber: state.start + state.bars,
+    drawLyrics: state.showLyrics,
+    drawMeasureNumbers: true,
+    measureNumberInterval: 1,
+    drawMeasureNumbersOnlyAtSystemStart: false
+  });
+  if (osmd.rules){
+    osmd.rules.RenderLyrics = state.showLyrics;
+    osmd.rules.RenderMeasureNumbers = true;
+    osmd.rules.MeasureNumberLabelOffset = 0;
+  }
+  await osmd.load(xml);
+  try {
+    osmd.sheet.Instruments.forEach((ins, i) => { ins.Visible = (i === state.partIndex); });
+  } catch(e){}
+  osmd.render();
+  bindStaffClicks();
+}
+
+/* Best-effort: make the drawn noteheads clickable. The cards below the
+   staff are the guaranteed path, so a failure here is cosmetic. */
+/* Tapping the staff. OSMD exposes GetNearestVoiceEntry, which takes a
+   point in sheet units (pixels / 10, before zoom) and hands back the
+   voice entry with its pitch attached — no mapping from my own note
+   list, so nothing can drift out of sync. Coordinates are measured
+   against the SVG rather than the panel, since the panel has padding
+   and scrolls horizontally. */
+let hitTargets = [];   // fallback only
+let tapDebug = false;
+
+function bindStaffClicks(){
+  hitTargets = [];
+  if (typeof clearHover === 'function') clearHover();
+  if (!osmd) return;
+  const notes = displayNotes().filter(n => !n.rest && !n.chord);
+  const unit  = 10 * (osmd.zoom || 1);
+  const spots = [];
+  try {
+    osmd.graphic.MeasureList.forEach(row => row.forEach(measure => {
+      if (!measure) return;
+      measure.staffEntries.forEach(se => se.graphicalVoiceEntries.forEach(gve => {
+        gve.notes.forEach(gn => {
+          if (gn.sourceNote?.isRest?.()) return;
+          const p = gn.PositionAndShape?.AbsolutePosition;
+          if (p) spots.push({ x: p.x * unit, y: p.y * unit });
+        });
+      }));
+    }));
+  } catch(e){ if (tapDebug) logLine('layout walk failed: ' + e.message); }
+  spots.sort((a, b) => a.x - b.x)
+       .slice(0, notes.length)
+       .forEach((s, i) => hitTargets.push({ ...s, note: notes[i] }));
+  if (tapDebug) logLine(`render: ${spots.length} drawn heads, ${notes.length} notes in segment`);
+}
+
+function sheetPoint(e, svg){
+  const r = svg.getBoundingClientRect();
+  const unit = 10 * (osmd?.zoom || 1);
+  return { x: (e.clientX - r.left) / unit, y: (e.clientY - r.top) / unit, unit, rect: r };
+}
+
+function flashAt(svg, x, y){
+  const c = document.createElementNS(SVG_NS, 'circle');
+  c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', '11');
+  c.setAttribute('fill', '#e8a33d'); c.setAttribute('opacity', '0.55');
+  c.setAttribute('pointer-events', 'none');
+  svg.appendChild(c);
+  setTimeout(() => c.remove(), 280);
+}
+
+/* The name of the note you just tapped, floating above it and fading.
+   Drawn into the SVG rather than overlaid in HTML, so it stays put
+   when the staff is scrolled sideways. */
+function labelText(n){
+  const syll = solfege(n.step, n.alter, n.fifths, state.doSys, 'en', n.mode) + accText(n.alter, 'en');
+  const abc  = letterName(n.step, n.alter, n.octave);
+  const fa   = state.showFa
+    ? '  ·  ' + solfege(n.step, n.alter, n.fifths, state.doSys, 'fa', n.mode) + accText(n.alter, 'fa')
+    : '';
+  return `${syll}  ·  ${abc}${fa}`;
+}
+
+function makeLabel(svg, x, y, text, fading){
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', fading ? 'notelabel' : 'notelabel sticky');
+  g.setAttribute('pointer-events', 'none');
+
+  const t = document.createElementNS(SVG_NS, 'text');
+  t.textContent = text;
+  t.setAttribute('x', x);
+  t.setAttribute('y', Math.max(26, y - 30));
+  t.setAttribute('text-anchor', 'middle');
+  t.setAttribute('font-size', '15');
+  t.setAttribute('font-family', 'Vazirmatn, system-ui, sans-serif');
+  t.setAttribute('fill', '#191c24');
+  g.appendChild(t);
+  svg.appendChild(g);
+
+  // the pill has to be measured after the text exists, then slid behind it
+  try {
+    const bb = t.getBBox();
+    const r = document.createElementNS(SVG_NS, 'rect');
+    r.setAttribute('x', bb.x - 10);   r.setAttribute('y', bb.y - 5);
+    r.setAttribute('width', bb.width + 20); r.setAttribute('height', bb.height + 10);
+    r.setAttribute('rx', '8');
+    r.setAttribute('fill', fading ? '#e8a33d' : '#f0f2f6');
+    r.setAttribute('stroke', '#c9ced9');
+    g.insertBefore(r, t);
+  } catch(e){}
+  return g;
+}
+
+function showNoteLabel(svg, x, y, text){
+  const g = makeLabel(svg, x, y, text, true);
+  setTimeout(() => g.remove(), 1500);
+}
+
+/* Spelling of last resort. If the position lookup misses, name the note
+   from its MIDI number, choosing sharps or flats to match the key so a
+   piece in B flat never reports A sharp. */
+const SHARP_SPELL = [['C',0],['C',1],['D',0],['D',1],['E',0],['F',0],
+                     ['F',1],['G',0],['G',1],['A',0],['A',1],['B',0]];
+const FLAT_SPELL  = [['C',0],['D',-1],['D',0],['E',-1],['E',0],['F',0],
+                     ['G',-1],['G',0],['A',-1],['A',0],['B',-1],['B',0]];
+function spellFromMidi(midi){
+  const m = state.score.parts[state.partIndex].measures[state.start] || {};
+  const table = (m.fifths < 0) ? FLAT_SPELL : SHARP_SPELL;
+  const [step, alter] = table[((midi % 12) + 12) % 12];
+  return { step, alter, octave: Math.floor(midi / 12) - 1,
+           fifths: m.fifths || 0, mode: m.mode || 'major' };
+}
+
+/* Hover: name the note under the cursor, silently, on devices that
+   actually have a cursor. Touch gets nothing here — a finger has no
+   hover state, and the tap label already covers it. */
+const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+let hoverLabel = null, hoverKey = null;
+
+function clearHover(){
+  if (hoverLabel){ hoverLabel.remove(); hoverLabel = null; }
+  hoverKey = null;
+}
+
+if (canHover){
+  const sheetEl = document.getElementById('sheet');
+  sheetEl.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || !hitTargets.length) return clearHover();
+    const svg = document.querySelector('#sheet svg');
+    if (!svg) return clearHover();
+    const r0 = svg.getBoundingClientRect();
+    const px = e.clientX - r0.left, py = e.clientY - r0.top;
+
+    let best = null, bestDist = Infinity, bestIdx = -1;
+    hitTargets.forEach((t, i) => {
+      const d = Math.hypot(px - t.x, py - t.y);
+      if (d < bestDist){ bestDist = d; best = t; bestIdx = i; }
+    });
+    if (!best || bestDist > 45) return clearHover();
+    if (hoverKey === bestIdx) return;          // same note, leave it alone
+    clearHover();
+    hoverKey = bestIdx;
+    hoverLabel = makeLabel(svg, best.x, best.y, labelText(best.note), false);
+  });
+  sheetEl.addEventListener('pointerleave', clearHover);
+}
+
+/* OSMD hands back a frequency, which cannot tell F sharp from G flat.
+   Match the tapped position against the parsed notes to get the
+   spelling right. */
+function noteNearX(x){
+  let best = null, bestDist = Infinity;
+  hitTargets.forEach(t => {
+    const d = Math.abs(t.x - x);
+    if (d < bestDist){ bestDist = d; best = t; }
+  });
+  return bestDist < 30 ? best.note : null;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+document.getElementById('sheet').addEventListener('pointerdown', e => {
+  clearHover();
+  const svg = document.querySelector('#sheet svg');
+  if (!svg) return;
+  const pt = sheetPoint(e, svg);
+
+  // primary: ask OSMD
+  if (osmd?.GraphicSheet?.GetNearestVoiceEntry){
+    let p;
+    try { p = new opensheetmusicdisplay.PointF2D(pt.x, pt.y); }
+    catch(err){ p = { x: pt.x, y: pt.y }; }
+    let entry = null;
+    try { entry = osmd.GraphicSheet.GetNearestVoiceEntry(p); }
+    catch(err){ if (tapDebug) logLine('GetNearestVoiceEntry threw: ' + err.message); }
+    const gnote = entry?.notes?.find(n => !n.sourceNote?.isRest?.());
+    const freq  = gnote?.sourceNote?.Pitch?.Frequency;
+    if (tapDebug) logLine(`tap at sheet(${pt.x.toFixed(1)}, ${pt.y.toFixed(1)}) → ` +
+                          (freq ? freq.toFixed(1) + 'Hz' : 'no entry'));
+    if (freq){
+      const pos = gnote.PositionAndShape?.AbsolutePosition;
+      if (pos){
+        const lx = pos.x * pt.unit, ly = pos.y * pt.unit;
+        flashAt(svg, lx, ly);
+        const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+        const named = noteNearX(lx) || spellFromMidi(midi);
+        showNoteLabel(svg, lx, ly, labelText(named));
+      }
+      playMidi(Math.round(69 + 12 * Math.log2(freq / 440)), null);
+      return;
+    }
+  }
+
+  // fallback: nearest of the positions collected at render time
+  if (!hitTargets.length){ if (tapDebug) logLine('no fallback targets'); return; }
+  const px = e.clientX - pt.rect.left, py = e.clientY - pt.rect.top;
+  let best = null, bestDist = Infinity;
+  hitTargets.forEach(t => {
+    const d = Math.hypot(px - t.x, py - t.y);
+    if (d < bestDist){ bestDist = d; best = t; }
+  });
+  if (tapDebug) logLine(`fallback: nearest of ${hitTargets.length} at ${bestDist.toFixed(0)}px`);
+  if (!best || bestDist > 80) return;
+  flashAt(svg, best.x, best.y);
+  showNoteLabel(svg, best.x, best.y, labelText(best.note));
+  playMidi(best.note.midi, null);   // a tapped note rings out
+});
+
+/* ------------------------------------------------------------------ *
+ * Note cards
+ * ------------------------------------------------------------------ */
+const stripEl = document.getElementById('strip');
+
+function cardMarkup(n, masked){
+  /* Masked cards all look alike, so the quiz never gives a rest away by shape. */
+  const faLine  = txt => state.showFa ? `<span class="fa" dir="rtl">${txt}</span>` : '';
+  const lyrLine = () => (state.showLyrics && n.lyric) ? `<span class="lyr">${n.lyric}</span>` : '';
+  if (masked){
+    return `<span class="syll">·</span>${faLine('&nbsp;')}<span class="abc">&nbsp;</span>${lyrLine()}`;
+  }
+  const beats = n.dur / n.divisions;
+  if (n.rest) return `<span class="syll">${beatsFrac(beats)}</span>` +
+                     faLine('سکوت') +
+                     `<span class="abc">${beatsName(beats)}</span>`;
+  const syll = solfege(n.step, n.alter, n.fifths, state.doSys, 'en', n.mode) + accText(n.alter, 'en');
+  const fa   = solfege(n.step, n.alter, n.fifths, state.doSys, 'fa', n.mode) + accText(n.alter, 'fa');
+  const abc  = letterName(n.step, n.alter, n.octave);
+  return `<span class="syll">${syll}</span>${faLine(fa)}<span class="abc">${abc}</span>${lyrLine()}`;
+}
+
+/* Clicking a rest gives you its length as a held pulse instead of a pitch. */
+function countRest(card, n){
+  const secs = Math.max(0.3, (n.dur / n.divisions) * 60 / (n.tempo || FALLBACK_BPM));
+  card.classList.add('counting');
+  setTimeout(() => card.classList.remove('counting'), secs * 1000);
+}
+
+/* Toggling Farsi mid-quiz must not wipe the score, so redraw the cards
+   in place: answered ones stay revealed, the rest stay masked. */
+function redrawQuizCards(){
+  const q = state.quiz;
+  if (!q) return;
+  [...stripEl.children].forEach((card, i) => {
+    const n = q.notes[i];
+    if (n) card.innerHTML = cardMarkup(n, i >= q.i);
+  });
+}
+
+function drawCards(masked = false){
+  const items = displayNotes().filter(n => !n.chord);
+  stripEl.innerHTML = '';
+  items.forEach((n, i) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (masked ? ' blank' : (n.rest ? ' rest' : ''));
+    b.dataset.i = i;
+    b.innerHTML = cardMarkup(n, masked);
+    b.addEventListener('click', () => n.rest ? countRest(b, n) : playMidi(n.midi, null));
+    stripEl.appendChild(b);
+  });
+  return items;
+}
+
+/* ------------------------------------------------------------------ *
+ * Playback of the whole segment
+ * ------------------------------------------------------------------ */
+const FALLBACK_BPM = 72;
+let segmentTimers = [];
+let segmentSoundStops = [];
+let segmentPlaying = false;
+
+function stopSegment(){
+  segmentTimers.forEach(clearTimeout);
+  segmentSoundStops.forEach(stop => stop?.());
+  segmentTimers = [];
+  segmentSoundStops = [];
+  segmentPlaying = false;
+  [...stripEl.children].forEach(c => c.classList.remove('counting', 'sounding'));
+  document.getElementById('play').textContent = 'Play segment';
+}
+
+function playSegment(){
+  if (segmentPlaying){ stopSegment(); return; }
+  ensureAudio();
+  segmentPlaying = true;
+  document.getElementById('play').textContent = 'Stop';
+  const notes = displayNotes();
+  const cards = [...stripEl.children];
+  let t = 0, prev = 0, ci = -1;
+  notes.forEach(n => {
+    const beats = n.dur / n.divisions;
+    const at   = n.chord ? prev : t;
+    const idx  = n.chord ? ci : ++ci;
+    const secs = Math.max(0.28, beats * 60 / (n.tempo || FALLBACK_BPM));
+    segmentTimers.push(setTimeout(() => {
+      if (!segmentPlaying) return;
+      if (!n.rest) segmentSoundStops.push(playMidi(n.midi, secs));
+      const c = cards[idx];
+      if (!c) return;
+      c.classList.add(n.rest ? 'counting' : 'sounding');
+      setTimeout(() => c.classList.remove('counting', 'sounding'), secs * 1000);
+    }, at * 1000));
+    if (!n.chord){ prev = t; t += beats * 60 / (n.tempo || FALLBACK_BPM); }
+  });
+  segmentTimers.push(setTimeout(stopSegment, t * 1000 + 150));
+}
+
+/* ------------------------------------------------------------------ *
+ * Quiz
+ * ------------------------------------------------------------------ */
+const keypadEl = document.getElementById('keypad');
+const scoreLineEl = document.getElementById('scoreLine');
+
+function buildKeypad(){
+  keypadEl.innerHTML = '';
+  SOLF_ORDER.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.textContent = `${s} · ${SOLF_FA[LETTERS[i]]} · ${LETTERS[i]}`;
+    b.addEventListener('click', () => answer(s));
+    keypadEl.appendChild(b);
+  });
+  const rest = document.createElement('button');
+  rest.textContent = 'rest · سکوت';
+  rest.title = 'rest — سکوت';
+  rest.addEventListener('click', () => answer('__rest__'));
+  keypadEl.appendChild(rest);
+}
+
+function startQuiz(){
+  const notes = drawCards(true);
+  state.quiz = { notes, i: 0, right: 0 };
+  keypadEl.classList.remove('hidden');
+  scoreLineEl.classList.remove('hidden');
+  document.getElementById('reveal').classList.remove('hidden');
+  document.getElementById('quizBtn').textContent = 'Leave quiz';
+  markCurrent();
+  updateScoreLine();
+}
+
+function endQuiz(){
+  state.quiz = null;
+  keypadEl.classList.add('hidden');
+  scoreLineEl.classList.add('hidden');
+  document.getElementById('reveal').classList.add('hidden');
+  document.getElementById('quizBtn').textContent = 'Start quiz';
+  drawCards(false);
+}
+
+function markCurrent(){
+  [...stripEl.children].forEach((c, i) =>
+    c.classList.toggle('current', state.quiz && i === state.quiz.i));
+}
+function updateScoreLine(){
+  const q = state.quiz; if (!q) return;
+  scoreLineEl.innerHTML = `<b>${q.right}</b> of ${q.i} · ${q.notes.length - q.i} left`;
+}
+
+function answer(choice){
+  const q = state.quiz; if (!q || q.i >= q.notes.length) return;
+  const n = q.notes[q.i];
+  let ok;
+  if (n.rest || choice === '__rest__'){
+    ok = n.rest && choice === '__rest__';
+  } else {
+    const correctSyll = solfege(n.step, n.alter, n.fifths, state.doSys, 'en', n.mode);
+    ok = choice === correctSyll;
+  }
+  const card = stripEl.children[q.i];
+  card.classList.remove('blank','current');
+  card.classList.add(ok ? 'right' : 'wrong');
+  if (n.rest) card.classList.add('rest');
+  card.innerHTML = cardMarkup(n, false);
+  if (n.rest) countRest(card, n); else playMidi(n.midi, null);
+  if (ok) q.right++;
+  q.i++;
+  markCurrent();
+  updateScoreLine();
+  if (q.i >= q.notes.length){
+    scoreLineEl.innerHTML = `<b>${q.right}</b> of ${q.notes.length}. New segment, or flip the clef and try the same dots again.`;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Wiring
+ * ------------------------------------------------------------------ */
+function fillParts(){
+  const sel = document.getElementById('part');
+  sel.innerHTML = '';
+  state.score.parts.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.index; o.textContent = p.name;
+    sel.appendChild(o);
+  });
+  sel.value = state.partIndex;
+}
+
+function randomSegment(){
+  const part = state.score.parts[state.partIndex];
+  const max = Math.max(1, part.measures.length - state.bars + 1);
+  state.start = Math.floor(Math.random() * max);
+}
+
+async function refresh({ reseed = false } = {}){
+  stopSegment();
+  if (reseed) randomSegment();
+  await renderSheet();
+  if (state.quiz) startQuiz(); else drawCards(false);
+}
+
+async function loadScore(xml, title, { reseed = true } = {}){
+  state.score = parseScore(xml);
+  state.partIndex = 0;
+  state.start = 0;
+  endQuiz();
+  fillParts();
+  document.getElementById('sheetTitle').textContent = title;
+  await refresh({ reseed });
+}
+
+let hasSelectedFile = false;
+document.getElementById('file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  hasSelectedFile = true;
+  if (f.name.endsWith('.mxl')){
+    alert('Compressed .mxl is a zip. Export as uncompressed MusicXML (.musicxml) and load that.');
+    return;
+  }
+  const text = await f.text();
+  try {
+    await loadScore(text, f.name);
+  } catch(err){ alert(err.message); }
+});
+
+document.getElementById('part').addEventListener('change', e => {
+  state.partIndex = parseInt(e.target.value, 10);
+  refresh({ reseed: true });
+});
+document.getElementById('barsSel').addEventListener('change', e => {
+  state.bars = parseInt(e.target.value, 10);
+  refresh({ reseed: true });
+});
+document.getElementById('newSeg').addEventListener('click', () => refresh({ reseed: true }));
+document.getElementById('play').addEventListener('click', playSegment);
+document.getElementById('reveal').addEventListener('click', () => { endQuiz(); });
+document.getElementById('quizBtn').addEventListener('click', () => {
+  state.quiz ? endQuiz() : startQuiz();
+});
+
+document.getElementById('faBtn').addEventListener('click', e => {
+  state.showFa = !state.showFa;
+  e.currentTarget.setAttribute('aria-pressed', String(state.showFa));
+  refresh();
+});
+document.getElementById('lyricBtn').addEventListener('click', e => {
+  state.showLyrics = !state.showLyrics;
+  e.currentTarget.setAttribute('aria-pressed', String(state.showLyrics));
+  refresh();
+});
+document.getElementById('accidentalNamesBtn').addEventListener('click', e => {
+  state.showAccidentalNames = !state.showAccidentalNames;
+  e.currentTarget.setAttribute('aria-pressed', String(state.showAccidentalNames));
+  state.quiz ? redrawQuizCards() : drawCards(false);
+});
+
+/* ------------------------------------------------------------------ *
+ * Demo score (placeholder pitches, in the shape of the example)
+ * ------------------------------------------------------------------ */
+function measure(num, attrs, pitches){
+  const notes = pitches.map(p => p.rest
+    ? `<note><rest/><duration>${p.d}</duration><type>${p.t}</type></note>`
+    : `<note><pitch><step>${p.s}</step>${p.a?`<alter>${p.a}</alter>`:''}<octave>${p.o}</octave></pitch>` +
+      `<duration>${p.d}</duration><type>${p.t}</type>${p.dot?'<dot/>':''}` +
+      `${p.l?`<lyric><syllabic>single</syllabic><text>${p.l}</text></lyric>`:''}</note>`).join('');
+  return `<measure number="${num}">${attrs}${notes}</measure>`;
+}
+const ATTR = sign => `<attributes><divisions>4</divisions><key><fifths>1</fifths><mode>major</mode></key>` +
+  `<time><beats>2</beats><beat-type>4</beat-type></time>` +
+  `<clef><sign>${sign}</sign><line>${sign==='G'?2:4}</line></clef></attributes>`;
+const RHY = (a,b,c,d) => ([
+  {...a,d:2,t:'eighth',l:'oon'},
+  {...b,d:2,t:'eighth',l:'ke'},
+  {...c,d:2,t:'eighth',l:'em'},
+  {...d,d:2,t:'eighth',l:'rooz'}
+]);
+const DEMO = `<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="3.1">
+  <part-list>
+    <score-part id="P1"><part-name>Soprano</part-name><part-abbreviation>S.</part-abbreviation></score-part>
+    <score-part id="P2"><part-name>Alto / Tenor</part-name><part-abbreviation>A/T</part-abbreviation></score-part>
+  </part-list>
+  <part id="P1">
+    ${measure(1, ATTR('G'), RHY({s:'D',o:5},{s:'D',o:5},{s:'E',o:5},{s:'B',o:4}))}
+    ${measure(2, '',        RHY({s:'E',o:5},{s:'D',o:5},{s:'B',o:4},{s:'A',o:4}))}
+  </part>
+  <part id="P2">
+    ${measure(1, ATTR('F'), RHY({s:'F',a:1,o:3},{s:'F',a:1,o:3},{s:'G',o:3},{s:'D',o:3}))}
+    ${measure(2, '',        RHY({s:'G',o:3},{s:'F',a:1,o:3},{s:'D',o:3},{s:'C',o:3}))}
+  </part>
+</score-partwise>`;
+
+buildKeypad();
+showAudioState();
+if (!hasOSMD) logLine('opensheetmusicdisplay did not load from the CDN.');
+const DEFAULT_SONG = 'songs/Dele%20Divoune/xml/Voxes-Dele-Divoune.xml';
+async function loadDefaultSong(){
+  try {
+    const response = await fetch(DEFAULT_SONG);
+    if (!response.ok) throw new Error(`Could not load the included score (${response.status}).`);
+    const xml = await response.text();
+    if (!hasSelectedFile) await loadScore(xml, 'Dele Divoune', { reseed: false });
+  } catch(e){
+    // Opening the page directly from disk prevents fetch; GitHub Pages will load the included score.
+    if (!hasSelectedFile) await loadScore(DEMO, 'Demo segment — load your own MusicXML to replace it', { reseed: false });
+    logLine(e.message);
+  }
+}
+loadDefaultSong().catch(e => logLine('initial load failed: ' + e.message));
+</script>
+</body>
+</html>
